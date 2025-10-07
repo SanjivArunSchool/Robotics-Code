@@ -73,59 +73,21 @@ void pre_auton(void) {
 }
 
 // Basic movement functions for autonomous:
-void move_forward(int numSec) { // numSec for time running
-  Right.setVelocity(50,percent); // 50% velocity
-  Right.spin(forward);
-  Brain.Screen.print("Right Motor moving forward");
-  Brain.Screen.print("Motor velocity: %d", FrontLeft.velocity(percent));
-  Left.setVelocity(50,percent); // 50% velocity
-  Left.spin(forward);
-  Brain.Screen.print("Left Motor moving forward");
-  Brain.Screen.print("Pausing brain for %d seconds", numSec);
-  wait(numSec, sec); // Waits for 1 second
-
-  Right.stop();
-  Left.stop();
+void move_backward(double inches) { // Move backward for a distance in inches
+  Drive.setDriveVelocity(50, percent);
+  Drive.driveFor(reverse, inches, inches);
 }
-void move_backward(int numSec) { // numSec for time running
-  Right.setVelocity(50,percent); // 50% velocity
-  Right.spin(reverse);
-  Brain.Screen.print("Right Motor moving backward");
-  Brain.Screen.print("Motor velocity: %d", FrontLeft.velocity(percent));
-  Left.setVelocity(50,percent); // 50% velocity
-  Left.spin(reverse);
-  Brain.Screen.print("Left Motor moving backward");
-  Brain.Screen.print("Pausing brain for %d seconds", numSec);
-  wait(numSec, sec); // Waits for 1 second
-
-  Right.stop();
-  Left.stop();
+void move_forward(double inches) { // Move forward for a distance in inches
+  Drive.setDriveVelocity(50, percent);
+  Drive.driveFor(forward, inches, inches);
 }
-void turn_right(int numSec) { // numSec for time running
-  Right.setVelocity(50,percent); // 50% velocity
-  Right.spin(reverse);
-  Brain.Screen.print("Right Motor moving backward");
-  Left.setVelocity(50,percent); // 50% velocity
-  Left.spin(forward);
-  Brain.Screen.print("Left Motor moving forward");
-  Brain.Screen.print("Pausing brain for %d seconds", numSec);
-  wait(numSec, sec); // Waits for 1 second
-
-  Right.stop();
-  Left.stop();
+void turn_left(double degrees) { // Turn left for a certain angle
+  Drive.setTurnVelocity(50, percent);
+  Drive.turnFor(left, degrees, degrees);
 }
-void turn_left(int numSec) { // numSec for time running
-  Right.setVelocity(50,percent); // 50% velocity
-  Right.spin(forward);
-  Brain.Screen.print("Right Motor moving forward");
-  Left.setVelocity(50,percent); // 50% velocity
-  Left.spin(reverse);
-  Brain.Screen.print("Left Motor moving backward");
-  Brain.Screen.print("Pausing brain for %d seconds", numSec);
-  wait(numSec, sec); // Waits for 1 second
-
-  Right.stop();
-  Left.stop();
+void turn_right(double degrees) { // Turn right for a certain angle
+  Drive.setTurnVelocity(50, percent);
+  Drive.turnFor(right, degrees, degrees);
 }
 // Intake functions:
 void intake_in(int numSec) {
@@ -144,6 +106,17 @@ void intake_out(int numSec) {
   
   Intake.stop();
 }
+// Runs intake and moves forward at the same time for a given distance (inches) and intake speed (percent)
+void intake_and_move_forward(double inches, int intake_speed = 40) {
+  // Set intake speed and start spinning
+  Intake.setVelocity(intake_speed, percent);
+  Intake.spin(forward);
+  // Move forward while intake is running
+  Drive.setDriveVelocity(50, percent);
+  Drive.driveFor(forward, inches, inches);
+  // Stop intake after moving
+  Intake.stop();
+}
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
 /*                              Autonomous Task                              */
@@ -155,29 +128,50 @@ void intake_out(int numSec) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  // ..........................................................................
-  // Insert autonomous user code here. Needs to be hard-coded
-  /**
-   * Basic outline:
-   * Once the robot spawns in, make sure the robot collects the 3 octaballs then turns Left/Right and then collects the other 3 on the opposite side. 
-   * Then, the robot comes to the center and drops them all off. Finally, the robot should make its way to 1 of the droppers and end the program.
-   */
-  // ..........................................................................
-  move_forward(2); // Move forward for 2 seconds 
-  turn_right(1); // Turn right for 1 second
-  move_forward(3); // Move forward for 2 seconds
-  turn_right(2); // Turn right for 2 second
-  intake_in(3); // Intake in for 3 seconds
-  move_backward(4); // Move backward for 4 seconds
-  move_forward(1); // Just to get out of the way.
-  turn_left(2); // Turn left for 2 seconds
-  move_forward(2); // Move forward for 2 seconds
-  turn_right(2); // Turn right for 2 second
-  intake_in(3); // Intake in for 3 seconds
-  move_forward(2); // Getting the top octaball
-  move_backward(2); // Move backward for 5 seconds
-  turn_left(1); // Turn left for 1 second
+  // Autonomous routine using distance (inches) and angle (degrees)
+  move_forward(24); // Move forward 24 inches
+  turn_right(90); // Turn right 90 degrees
+  move_forward(5); // Move forward 5 inches
+  turn_left(90); // Turn left 90 degrees
+  intake_and_move_forward(20, 40); // Move forward 24 inches while intaking at 40% speed
+  turn_left(45);   // Turn left 45 degrees
+  move_forward(10); // Move forward 10 inches (chugging robot to score)
+  intake_out(1);   // Outtake for 1 second to score
+  move_backward(5); // Move backward 5 inches to original position
+  turn_right(45);   // Turn right 90 degrees (Continue moving in initial direction)
+  move_forward(10); // Move forward 12 inches to collect more octaballs // CHANGE
+  intake_and_move_forward(5, 40); // Move forward 12 inches while intaking at 40% speed // CHANGE
+  turn_left(135); // Turn left 135 degrees
+  move_forward(10); // Move forward 10 inches to reach scoring zone
+  intake_out(3);   // Outtake for 1 second to score
+  move_backward(5); // Move backward 5 inches to original position
+  turn_right(135);   // Turn right 135 degrees 
+  move_forward(5);
+  turn_left(90);
+  move_forward(12);
+  intake_and_move_forward(12, 40); // Move forward 12 inches while intaking at 40% speed
+  turn_left(90);
+  move_forward(2);
+  turn_left(45);
+  move_forward(10); // Move forward 10 inches to reach scoring zone
+  intake_out(3);   // Outtake for 1 second to score
+  move_backward(5); // Move backward 5 inches to original position
+  turn_right(45);   // Turn right 90 degrees 
+  move_forward(12); // Move forward 12 inches to collect more octaballs
+  intake_and_move_forward(12, 40); // Move forward 12 inches while intaking at 40% speed
+  turn_left(90);
+  move_forward(2);
+  turn_left(45);
+  move_forward(10); // Move forward 10 inches to reach scoring zone
+  intake_out(3);   // Outtake for 1 second to score
+  move_backward(5); // Move backward 5 inches to original position
+  turn_right(45);   // Turn right 45 degrees to correct orientation
+  turn_right(180);
 
+  move_backward(24); // Move forward 24 inches to get ready to park
+  move_forward(1); // For safety
+  move_backward(12); // Move to the center of the platform
+  // END //
 }
 
 /*---------------------------------------------------------------------------*/
@@ -192,7 +186,7 @@ void autonomous(void) {
 
 void usercontrol(void) {
   // Remove autonomous(); from here! Only run user control code in this loop.
-  autonomous();
+  // autonomous();
   // ..........................................................................
   while(true) {
     // Intake control
