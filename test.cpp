@@ -333,32 +333,24 @@ void usercontrol(void) {
     }
     if(Controller1.ButtonX.pressing()) {
       boostFactor += 0.1;
-      Controller1.Screen.clearScreen();
-      Controller1.Screen.print("Overall speed increased");
-      leftSpeed = (fwd + turn) * boostFactor;
-      rightSpeed = (fwd - turn) * boostFactor;
+      if(boostFactor > 2.0) boostFactor = 2.0;
+      Controller1.rumble(".");
+      wait(200, msec);
     } else if (Controller1.ButtonB.pressing()) {
       boostFactor -= 0.1;
-      Controller1.Screen.clearScreen();
-      Controller1.Screen.print("Overall speed decreased");
-      leftSpeed = (fwd + turn) * boostFactor;
-      rightSpeed = (fwd - turn) * boostFactor;
-    }
-    if(Controller1.ButtonY.pressing()) {
-      initialBoostFactor = boostFactor;
-      if(isBoostActivated) {
-        isBoostActivated = false;
+      if(boostFactor < 0.5) boostFactor = 0.5;
+      Controller1.rumble(".");
+      wait(200, msec);
+    } else if(Controller1.ButtonY.pressing()) {
+      if(boostFactor == 2.0) {
+        boostFactor = 1.0; // Toggle off
+        Controller1.rumble("-");
       } else {
-        isBoostActivated = true;
+        boostFactor = 2.0; // Toggle on
+        Controller1.rumble("- -");
       }
-      boostFactor = 2.0;
-      Controller1.Screen.clearScreen();
-      Controller1.Screen.setCursor(1,1);
-      Controller1.Screen.print("Boost Activated");
-      leftSpeed = (fwd + turn) * boostFactor;
-      rightSpeed = (fwd - turn) * boostFactor;
+      wait(300, msec);
     }
-    wait(20, msec);
   }
 }
 
