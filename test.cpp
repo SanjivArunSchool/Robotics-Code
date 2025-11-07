@@ -1,18 +1,106 @@
+#pragma region VEXcode Generated Robot Configuration
+// Make sure all required headers are included.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+
+
+#include "vex.h"
+
+using namespace vex;
+
+// Brain should be defined by default
+brain Brain;
+
+
+// START V5 MACROS
+#define waitUntil(condition)                                                   \
+  do {                                                                         \
+    wait(5, msec);                                                             \
+  } while (!(condition))
+
+#define repeat(iterations)                                                     \
+  for (int iterator = 0; iterator < iterations; iterator++)
+// END V5 MACROS
+
+
+// Robot configuration code.
+motor leftMotorA = motor(PORT12, ratio6_1, false);
+motor leftMotorB = motor(PORT18, ratio6_1, false);
+motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB);
+motor rightMotorA = motor(PORT13, ratio6_1, true);
+motor rightMotorB = motor(PORT17, ratio6_1, true);
+motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB);
+inertial DrivetrainInertial = inertial(PORT9);
+smartdrive Drivetrain = smartdrive(LeftDriveSmart, RightDriveSmart, DrivetrainInertial, 299.24, 320, 40, mm, 0.5);
+
+controller Controller1 = controller(primary);
+
+
+// generating and setting random seed
+void initializeRandomSeed(){
+  int systemTime = Brain.Timer.systemHighResolution();
+  double batteryCurrent = Brain.Battery.current();
+  double batteryVoltage = Brain.Battery.voltage(voltageUnits::mV);
+
+  // Combine these values into a single integer
+  int seed = int(batteryVoltage + batteryCurrent * 100) + systemTime;
+
+  // Set the seed
+  srand(seed);
+}
+
+bool vexcode_initial_drivetrain_calibration_completed = false;
+void calibrateDrivetrain() {
+  wait(200, msec);
+  Brain.Screen.print("Calibrating");
+  Brain.Screen.newLine();
+  Brain.Screen.print("Inertial");
+  DrivetrainInertial.calibrate();
+  while (DrivetrainInertial.isCalibrating()) {
+    wait(25, msec);
+  }
+  vexcode_initial_drivetrain_calibration_completed = true;
+  // Clears the screen and returns the cursor to row 1, column 1.
+  Brain.Screen.clearScreen();
+  Brain.Screen.setCursor(1, 1);
+}
+
+void vexcodeInit() {
+
+  // Calibrate the Drivetrain
+  calibrateDrivetrain();
+
+  //Initializing random seed.
+  initializeRandomSeed(); 
+}
+
+
+// Helper to make playing sounds from the V5 in VEXcode easier and
+// keeps the code cleaner by making it clear what is happening.
+void playVexcodeSound(const char *soundName) {
+  printf("VEXPlaySound:%s\n", soundName);
+  wait(5, msec);
+}
+
+
+
+// define variable for remote controller enable/disable
+bool RemoteControlCodeEnabled = true;
+
+#pragma endregion VEXcode Generated Robot Configuration
 
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       Students
+/*    Author:       Students                                                  */
 /*    Team:         W                                                         */
 /*    Created:      7/8/2025, 10:16:11 AM                                     */
 /*    Description:  V5 project                                                */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
-
-// libraries
-#include "vex.h"
-
-using namespace vex;
 
 // A global instance of competition
 competition Competition;
@@ -28,17 +116,6 @@ motor_group Left = motor_group (FrontLeft, BackLeft);
 motor FrontRight = motor (PORT13, true);
 motor BackRight = motor (PORT17, true);
 motor_group Right = motor_group (FrontRight, BackRight); 
-
-// Example values, adjust to match your robot's actual measurements!
-double WHEEL_TRAVEL = 4.0;    // in inches (typical VEX wheel)
-double TRACK_WIDTH = 12.0;    // in inches (distance between left and right wheels)
-double WHEEL_BASE = 10.0;     // in inches (distance between front and back wheels)
-
-//Drive Definition
-drivetrain Drive = drivetrain(
-  Left, Right, WHEEL_TRAVEL, TRACK_WIDTH, WHEEL_BASE, distanceUnits::in
-);
-controller Controller1; 
 
 //Intake
 motor ILeft = motor (PORT10,true);
@@ -57,46 +134,69 @@ motor_group Intake = motor_group (ILeft, IRight);
 /*  function is only called once after the V5 has been powered on and        */
 /*  not every time that the robot is disabled.                               */
 /*---------------------------------------------------------------------------*/
-// Custom wait function
-// TimeUnites is: msec, sec
-void wait(int time, timeUnits units) { // might change this to floats for better adjustments
-  switch (units) {
-    case timeUnits::msec:
-      break;
-    case timeUnits::sec: // 1 second,instead of 1 milisecond
-      time = time / 1000;
-      break;
-    default:
-      // If the unit is not recognized, default to milliseconds
-      break;
-  }
-  // Perform the wait
-  task::sleep(time);
-}
+
 void pre_auton(void) {
   Intake.setVelocity (50000,rpm); // Was 100,000 RPM but changed to 50K for testing.
-  Drive.setDriveVelocity (10000, rpm);
+  Drivetrain.setDriveVelocity (10000, rpm);
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
 }
 
 // Basic movement functions for autonomous:
-void move_forward(double inches) { // Move backward for a distance in inches
-  Drive.setDriveVelocity(50, percent);
-  Drive.driveFor(reverse, inches, distanceUnits::in);
+// === Movement Functions ===
+void move_forward(double inches1) {
+  Drivetrain.setDriveVelocity(30, percent);
+  Drivetrain.driveFor(reverse, inches1, inches);
+  Drivetrain.setStopping(coast);
 }
-void move_backward(double inches) { // Move forward for a distance in inches
-  Drive.setDriveVelocity(50, percent);
-  Drive.driveFor(forward, inches, distanceUnits::in);
+
+void move_backward(double inches1) {
+  Drivetrain.setDriveVelocity(50, percent);
+  Drivetrain.driveFor(forward, inches1, distanceUnits::in);
 }
-void turn_right(double degrees) { // Turn left for a certain angle
-  Drive.setTurnVelocity(50, percent);
-  Drive.turnFor(left, degrees, rotationUnits::deg);
+
+// === Fixed Turn Function ===
+void turnToRotate(double targetAngle, double speed = 25) {
+  // Reset inertial rotation so 0 is your current facing direction
+  DrivetrainInertial.setRotation(0, degrees);
+
+  double current = 0;
+  double tolerance = 2.0; // acceptable error in degrees
+  double startTime = Brain.timer(msec);
+  double timeout = 4000; // 4 seconds safety limit
+
+  if (targetAngle > 0) {
+    // Turn right
+    LeftDriveSmart.spin(reverse, speed, percent);
+    RightDriveSmart.spin(forward, speed, percent);
+    while ((current < targetAngle - tolerance) && (Brain.timer(msec) - startTime < timeout)) {
+      current = DrivetrainInertial.rotation(degrees);
+      wait(10, msec);
+    }
+    LeftDriveSmart.stop();
+    RightDriveSmart.stop();
+  } else {
+    // Turn left
+    LeftDriveSmart.spin(forward, speed, percent);
+    RightDriveSmart.spin(reverse, speed, percent);
+    while ((current > targetAngle + tolerance) && (Brain.timer(msec) - startTime < timeout)) {
+      current = DrivetrainInertial.rotation(degrees);
+      wait(10, msec);
+    }
+    LeftDriveSmart.stop();
+    RightDriveSmart.stop();
+  }
+
+  // Stop all drive motors with brake hold
+  LeftDriveSmart.stop(coast);
+  RightDriveSmart.stop(coast);
+
+  Brain.Screen.clearScreen();
+  Brain.Screen.print("Turn done at %.2f°", current);
 }
-void turn_left(double degrees) { // Turn right for a certain angle
-  Drive.setTurnVelocity(50, percent);
-  Drive.turnFor(right, degrees, rotationUnits::deg);
-}
+
+
+
 // Intake functions:
 void intake_in(int numSec) {
   Brain.Screen.print("Intake motor spinning forward");
@@ -120,8 +220,8 @@ void intake_and_move_forward(double inches, int intake_speed = 40) {
   Intake.setVelocity(intake_speed, percent);
   Intake.spin(reverse);
   // Move forward while intake is running
-  Drive.setDriveVelocity(50, percent);
-  Drive.driveFor(forward, inches, distanceUnits::in);
+  Drivetrain.setDriveVelocity(50, percent);
+  Drivetrain.driveFor(forward, inches, distanceUnits::in);
   // Stop intake after moving
   Intake.stop();
 }
@@ -135,58 +235,31 @@ void intake_and_move_forward(double inches, int intake_speed = 40) {
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
 
-// void autonomous(void) {
-//   // Autonomous routine using distance (inches) and angle (degrees)
-//   move_forward(24); // Move forward 24 inches
-//   turn_right(90); // Turn right 90 degrees
-//   move_forward(5); // Move forward 5 inches
-//   turn_left(90); // Turn left 90 degrees
-//   intake_and_move_forward(20, 40); // Move forward 24 inches while intaking at 40% speed
-//   turn_left(45);   // Turn left 45 degrees
-//   move_forward(10); // Move forward 10 inches (chugging robot to score)
-//   intake_out(1);   // Outtake for 1 second to score
-//   move_backward(5); // Move backward 5 inches to original position
-//   turn_right(45);   // Turn right 90 degrees (Continue moving in initial direction)
-//   move_forward(10); // Move forward 12 inches to collect more octaballs // CHANGE
-//   intake_and_move_forward(5, 40); // Move forward 12 inches while intaking at 40% speed // CHANGE
-//   turn_left(135); // Turn left 135 degrees
-//   move_forward(10); // Move forward 10 inches to reach scoring zone
-//   intake_out(3);   // Outtake for 1 second to score
-//   move_backward(5); // Move backward 5 inches to original position
-//   turn_right(135);   // Turn right 135 degrees 
-//   move_forward(5);
-//   turn_left(90);
-//   move_forward(12);
-//   intake_and_move_forward(12, 40); // Move forward 12 inches while intaking at 40% speed
-//   turn_left(90);
-//   move_forward(2);
-//   turn_left(45);
-//   move_forward(10); // Move forward 10 inches to reach scoring zone
-//   intake_out(3);   // Outtake for 1 second to score
-//   move_backward(5); // Move backward 5 inches to original position
-//   turn_right(45);   // Turn right 90 degrees 
-//   move_forward(12); // Move forward 12 inches to collect more octaballs
-//   intake_and_move_forward(12, 40); // Move forward 12 inches while intaking at 40% speed
-//   turn_left(90);
-//   move_forward(2);
-//   turn_left(45);
-//   move_forward(10); // Move forward 10 inches to reach scoring zone
-//   intake_out(3);   // Outtake for 1 second to score
-//   move_backward(5); // Move backward 5 inches to original position
-//   turn_right(45);   // Turn right 45 degrees to correct orientation
-//   turn_right(180);
-
-//   move_backward(24); // Move forward 24 inches to get ready to park
-//   move_forward(1); // For safety
-//   move_backward(12); // Move to the center of the platform
-//   // END //
-// }
-
 void autonomous(void) {
-  // turn_right(90);
-  move_backward(8);
-  // shold be able to park in.
+  // Set a safe speed for testing
+  Left.setVelocity(60, percent);
+  Right.setVelocity(60, percent);
+  Intake.setVelocity(60, percent);
+
+  move_forward(12); // 12 63-18
+  //turnToRotate(75); // 90
+  // move_forward(8.5);
+  // turnToRotate(0);
+  // intake_and_move_forward(22);
+  // move_backward(8);
+  // turnToRotate(-45);  // 315° == -45°
+  // move_forward(23);
+  // intake_out(5);
+  // move_backward(23);
+  // turnToRotate(0);
+  // move_backward(47);
+  // turnToRotate(-90);
+  // move_backward(33);
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(1,1);
+  // Controller1.Screen.print("Done");
 }
+
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
 /*                              User Control Task                            */
@@ -196,32 +269,41 @@ void autonomous(void) {
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
-
+// Works like a charm
 void usercontrol(void) {
   // Remove autonomous(); from here! Only run user control code in this loop.
   //autonomous();
   // ..........................................................................
   while(true) {
     // Intake control
-  if (Controller1.ButtonL1.pressing()) {
-    Intake.setVelocity(40, percent); // Set intake speed to 40%
-    Intake.spin(forward);
-  } else if (Controller1.ButtonL2.pressing()) {
-    Intake.setVelocity(40, percent); // Set intake speed to 40%
-    Intake.spin(reverse);
-  } else {
-    Intake.stop();
-  }
+    int intakePercent = 60;
+    Intake.setVelocity(intakePercent, percent); // Set intake speed to 40%
+    if (Controller1.ButtonL1.pressing()) {
+      Intake.spin(forward);
+    } else if (Controller1.ButtonL2.pressing()) {
+      Intake.spin(reverse);
+    } else {
+      Intake.stop();
+    }
+    // Change Speed of Intake
+    if(Controller1.ButtonR1.pressing()) {
+      intakePercent = intakePercent - 10;
+    } else if(Controller1.ButtonR2.pressing()) {
+      intakePercent = intakePercent + 10;
+    }
 
     // Arcade drive with left stick
     int fwd = -Controller1.Axis3.position(percent); // Invert up/down
     int turn = -Controller1.Axis4.position(percent); // Invert left/right
 
-    int leftSpeed = fwd + turn;
-    int rightSpeed = fwd - turn;
+    double boostFactor = 1.0;
+    double initialBoostFactor = boostFactor;
+    bool isBoostActivated = false;
+    double leftSpeed = (fwd + turn) * boostFactor;
+    double rightSpeed = (fwd - turn) * boostFactor;
 
     // Deadzone for small joystick movements
-    if(abs(leftSpeed) > 10 || abs(rightSpeed) > 10){
+    if(abs(leftSpeed) > 15 || abs(rightSpeed) > 15){
       Left.setVelocity(leftSpeed, percent);
       Left.spin(forward);
       Right.setVelocity(rightSpeed, percent);
@@ -232,7 +314,33 @@ void usercontrol(void) {
       Left.setStopping(coast);
       Right.setStopping(coast);
     }
-
+    if(Controller1.ButtonX.pressing()) {
+      boostFactor += 0.1;
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.print("Overall speed increased");
+      leftSpeed = (fwd + turn) * boostFactor;
+      rightSpeed = (fwd - turn) * boostFactor;
+    } else if (Controller1.ButtonB.pressing()) {
+      boostFactor -= 0.1;
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.print("Overall speed decreased");
+      leftSpeed = (fwd + turn) * boostFactor;
+      rightSpeed = (fwd - turn) * boostFactor;
+    }
+    if(Controller1.ButtonY.pressing()) {
+      initialBoostFactor = boostFactor;
+      if(isBoostActivated) {
+        isBoostActivated = false;
+      } else {
+        isBoostActivated = true;
+      }
+      boostFactor = 2.0;
+      Controller1.Screen.clearScreen();
+      Controller1.Screen.setCursor(1,1);
+      Controller1.Screen.print("Boost Activated");
+      leftSpeed = (fwd + turn) * boostFactor;
+      rightSpeed = (fwd - turn) * boostFactor;
+    }
     wait(20, msec);
   }
 }
@@ -248,6 +356,11 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Prevent main from exiting with an infinite loop.
+  // autonomous();
+  Brain.Screen.clearScreen();
+  Brain.Screen.setCursor(0,0);
+  Brain.Screen.print("In Main Function Awaiting command, Status: ");
+  Drivetrain.isDone();
   // Also, stop all motors when main ends.
   Left.stop();
   Right.stop();
