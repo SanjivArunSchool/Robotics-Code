@@ -118,9 +118,7 @@ motor BackRight = motor (PORT17, true);
 motor_group Right = motor_group (FrontRight, BackRight); 
 
 //Intake
-motor ILeft = motor (PORT10,true);
-motor IRight = motor (PORT15,false);
-motor_group Intake = motor_group (ILeft, IRight);
+motor Intake = motor (PORT10,true);
 
 
 // define your global instances of motors and other devices here
@@ -197,33 +195,28 @@ void turnToRotate(double targetAngle, double speed = 15) {
   wait(200, msec);
 }
 
-
-
 // Intake functions:
 void intake_in(int numSec) {
   Brain.Screen.print("Intake motor spinning forward");
-  Intake.setVelocity(40, percent); // Set intake speed to 40%
-  Intake.spin(forward);
-  Brain.Screen.print("Pausing brain for %d seconds", numSec);
-  wait(numSec, sec); // Waits for 1 second
-
+  Intake.setVelocity(90, percent);
+  Intake.spin(reverse);
+  wait(numSec, sec);
   Intake.stop();
 }
 void intake_out(int numSec) {
   Brain.Screen.print("Intake motor spinning reverse");
-  Intake.spin(reverse);
-  wait(numSec, sec); // Waits for 1 second
-  
+  Intake.setVelocity(90, percent);
+  Intake.spin(forward);
+  wait(numSec, sec);
   Intake.stop();
 }
 // Runs intake and moves forward at the same time for a given distance (inches) and intake speed (percent)
-void intake_and_move_forward(double inches, int intake_speed = 40) {
+void intake_and_move_forward(double inches1, int intake_speed = 60) {
   // Set intake speed and start spinning
   Intake.setVelocity(intake_speed, percent);
-  Intake.spin(forward);
+  Intake.spin(reverse);
   // Move forward while intake is running
-  Drivetrain.setDriveVelocity(50, percent);
-  Drivetrain.driveFor(reverse, inches, distanceUnits::in);
+  move_forward(inches1);
   // Stop intake after moving
   Intake.stop();
 }
@@ -249,18 +242,18 @@ void autonomous(void) {
   move_forward(8.5);
   turnToRotate(-75);
   intake_and_move_forward(22);
-  // move_backward(8);
-  // turnToRotate(-45);  // 315° == -45°
-  // move_forward(23);
+  move_backward(8);
+  turnToRotate(-30);  // 315° == -45°
+  move_forward(23);
   // intake_out(5);
   // move_backward(23);
-  // turnToRotate(0);
+  // turnToRotate(-30);
   // move_backward(47);
   // turnToRotate(-90);
   // move_backward(33);
-  // Controller1.Screen.clearScreen();
-  // Controller1.Screen.setCursor(1,1);
-  // Controller1.Screen.print("Done");
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("Done");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -277,23 +270,26 @@ void usercontrol(void) {
   // Remove autonomous(); from here! Only run user control code in this loop.
   //autonomous();
   // ..........................................................................
-  int intakePercent = 60;
+  int intakePercent = 40;
 
   double boostFactor = 1.0;
   double initialBoostFactor = boostFactor;
   bool isBoostActivated = false;
 
   while(true) {
-    Intake.setVelocity(intakePercent, percent);
     // Intake control
+    // Intake control - mutually exclusive
     Intake.setVelocity(intakePercent, percent); // Set intake speed to 40%
     if (Controller1.ButtonL1.pressing()) {
-      Intake.spin(forward);
-    } else if (Controller1.ButtonL2.pressing()) {
-      Intake.spin(reverse);
-    } else {
-      Intake.stop();
+      Intake.spin(reverse);  // Intake In
+    } 
+    else if (Controller1.ButtonL2.pressing()) {
+      Intake.spin(forward);  // Intake Out
+    } 
+    else {
+      Intake.stop();          // Neither button pressed
     }
+
     // Change Speed of Intake
     if(Controller1.ButtonR1.pressing()) {
       intakePercent = intakePercent - 10;
