@@ -136,8 +136,8 @@ motor_group Intake = motor_group (ILeft, IRight);
 /*---------------------------------------------------------------------------*/
 
 void pre_auton(void) {
-  Intake.setVelocity (50000,rpm); // Was 100,000 RPM but changed to 50K for testing.
-  Drivetrain.setDriveVelocity (10000, rpm);
+  Intake.setVelocity (90, percent); // Was 100,000 RPM but changed to 50K for testing.
+  Drivetrain.setDriveVelocity (50, percent);
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
 }
@@ -145,18 +145,19 @@ void pre_auton(void) {
 // Basic movement functions for autonomous:
 // === Movement Functions ===
 void move_forward(double inches1) {
-  Drivetrain.setDriveVelocity(30, percent);
+  Drivetrain.setDriveVelocity(20, percent);
   Drivetrain.driveFor(reverse, inches1, inches);
   Drivetrain.setStopping(coast);
 }
 
 void move_backward(double inches1) {
-  Drivetrain.setDriveVelocity(50, percent);
-  Drivetrain.driveFor(forward, inches1, distanceUnits::in);
+  Drivetrain.setDriveVelocity(20, percent);
+  Drivetrain.driveFor(forward, inches1, inches);
+  Drivetrain.setStopping(coast);
 }
 
 // === Fixed Turn Function ===
-void turnToRotate(double targetAngle, double speed = 25) {
+void turnToRotate(double targetAngle, double speed = 15) {
   // Reset inertial rotation so 0 is your current facing direction
   DrivetrainInertial.setRotation(0, degrees);
 
@@ -193,6 +194,7 @@ void turnToRotate(double targetAngle, double speed = 25) {
 
   Brain.Screen.clearScreen();
   Brain.Screen.print("Turn done at %.2f°", current);
+  wait(200, msec);
 }
 
 
@@ -218,10 +220,10 @@ void intake_out(int numSec) {
 void intake_and_move_forward(double inches, int intake_speed = 40) {
   // Set intake speed and start spinning
   Intake.setVelocity(intake_speed, percent);
-  Intake.spin(reverse);
+  Intake.spin(forward);
   // Move forward while intake is running
   Drivetrain.setDriveVelocity(50, percent);
-  Drivetrain.driveFor(forward, inches, distanceUnits::in);
+  Drivetrain.driveFor(reverse, inches, distanceUnits::in);
   // Stop intake after moving
   Intake.stop();
 }
@@ -237,15 +239,16 @@ void intake_and_move_forward(double inches, int intake_speed = 40) {
 
 void autonomous(void) {
   // Set a safe speed for testing
-  Left.setVelocity(60, percent);
-  Right.setVelocity(60, percent);
+  Left.setVelocity(40, percent);
+  Right.setVelocity(40, percent);
   Intake.setVelocity(60, percent);
 
   move_forward(12); // 12 63-18
-  //turnToRotate(75); // 90
-  // move_forward(8.5);
-  // turnToRotate(0);
-  // intake_and_move_forward(22);
+  wait(200, msec);
+  turnToRotate(75, 15); // 90
+  move_forward(8.5);
+  turnToRotate(-75);
+  intake_and_move_forward(22);
   // move_backward(8);
   // turnToRotate(-45);  // 315° == -45°
   // move_forward(23);
@@ -274,9 +277,15 @@ void usercontrol(void) {
   // Remove autonomous(); from here! Only run user control code in this loop.
   //autonomous();
   // ..........................................................................
+  int intakePercent = 60;
+
+  double boostFactor = 1.0;
+  double initialBoostFactor = boostFactor;
+  bool isBoostActivated = false;
+
   while(true) {
+    Intake.setVelocity(intakePercent, percent);
     // Intake control
-    int intakePercent = 60;
     Intake.setVelocity(intakePercent, percent); // Set intake speed to 40%
     if (Controller1.ButtonL1.pressing()) {
       Intake.spin(forward);
@@ -288,17 +297,25 @@ void usercontrol(void) {
     // Change Speed of Intake
     if(Controller1.ButtonR1.pressing()) {
       intakePercent = intakePercent - 10;
+      if(intakePercent < 0) {
+        intakePercent = 0;
+        Controller1.Screen.clearScreen();
+        Controller1.Screen.setCursor(1,1);
+        Controller1.Screen.print("Intake Percent: 0");
+      }
     } else if(Controller1.ButtonR2.pressing()) {
       intakePercent = intakePercent + 10;
+      if(intakePercent > 100) {
+        Controller1.Screen.clearScreen();
+        Controller1.Screen.setCursor(1,1);
+        Controller1.Screen.print("Intake Percent: 100");
+      }
     }
 
     // Arcade drive with left stick
     int fwd = -Controller1.Axis3.position(percent); // Invert up/down
     int turn = -Controller1.Axis4.position(percent); // Invert left/right
 
-    double boostFactor = 1.0;
-    double initialBoostFactor = boostFactor;
-    bool isBoostActivated = false;
     double leftSpeed = (fwd + turn) * boostFactor;
     double rightSpeed = (fwd - turn) * boostFactor;
 
